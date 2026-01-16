@@ -362,13 +362,72 @@ HTML_TEMPLATE = """
         }
 
         async function assessControl(controlId) {
-            const response = await fetch('/api/assess', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({control_id: controlId})
-            });
-            const data = await response.json();
-            alert(data.assessment);
+            const btn = event.target;
+            const originalText = btn.textContent;
+            btn.textContent = 'Analyzing...';
+            btn.disabled = true;
+            
+            try {
+                const response = await fetch('/api/assess', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({control_id: controlId})
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to assess control');
+                }
+                
+                const data = await response.json();
+                
+                if (data.error) {
+                    alert('Error: ' + data.error);
+                } else if (data.assessment) {
+                    // Create a modal/overlay to show the assessment
+                    showAssessmentModal(controlId, data.assessment);
+                } else {
+                    alert('No assessment data received');
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+                console.error('Assessment error:', error);
+            } finally {
+                btn.textContent = originalText;
+                btn.disabled = false;
+            }
+        }
+        
+        function showAssessmentModal(controlId, assessment) {
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0,0,0,0.5);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 1000;
+            `;
+            
+            modal.innerHTML = `
+                <div style="background: white; padding: 30px; border-radius: 12px; max-width: 700px; max-height: 80vh; overflow-y: auto; position: relative;">
+                    <h3 style="color: #1e3a8a; margin-bottom: 16px;">Assessment: ${controlId}</h3>
+                    <div style="white-space: pre-wrap; line-height: 1.6; color: #334155;">${assessment}</div>
+                    <button onclick="this.closest('[style*=fixed]').remove()" 
+                            style="margin-top: 20px; padding: 10px 24px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                        Close
+                    </button>
+                </div>
+            `;
+            
+            modal.onclick = (e) => {
+                if (e.target === modal) modal.remove();
+            };
+            
+            document.body.appendChild(modal);
         }
 
         async function sendMessage() {
