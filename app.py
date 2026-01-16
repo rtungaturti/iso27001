@@ -551,7 +551,7 @@ Keep the response concise and practical."""
         print("🤖 Calling Groq API...")
         chat_completion = client.chat.completions.create(
             messages=[{"role": "user", "content": prompt}],
-            model="llama-3.1-70b-versatile",
+            model="llama-3.3-70b-versatile",
             temperature=0.7,
             max_tokens=1024
         )
