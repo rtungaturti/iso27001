@@ -509,15 +509,21 @@ def get_controls():
 
 @app.route('/api/assess', methods=['POST'])
 def assess_control():
-    data = request.json
-    control_id = data.get('control_id')
-    
-    if control_id not in ISO_CONTROLS:
-        return jsonify({"error": "Invalid control ID"}), 400
-    
-    control = ISO_CONTROLS[control_id]
-    
-    prompt = f"""You are an ISO/IEC 27001:2022 audit expert. Provide a detailed assessment guide for:
+    try:
+        data = request.json
+        print(f"📥 Received data: {data}")
+        
+        control_id = data.get('control_id')
+        print(f"🔑 Control ID: {control_id}")
+        
+        if control_id not in ISO_CONTROLS:
+            print(f"❌ Invalid control ID: {control_id}")
+            return jsonify({"error": f"Invalid control ID: {control_id}"}), 400
+        
+        control = ISO_CONTROLS[control_id]
+        print(f"✅ Control found: {control}")
+        
+        prompt = f"""You are an ISO/IEC 27001:2022 audit expert. Provide a detailed assessment guide for:
 
 Control: {control_id} - {control['name']}
 Category: {control['category']}
@@ -530,7 +536,19 @@ Please provide:
 
 Keep the response concise and practical."""
 
-    try:
+        print("=" * 80)
+        print("📤 PROMPT BEING SENT TO GROQ:")
+        print("=" * 80)
+        print(prompt)
+        print("=" * 80)
+        
+        # Check if Groq client is initialized
+        if client is None or not os.environ.get("GROQ_API_KEY"):
+            error_msg = "Groq API key not configured. Please set GROQ_API_KEY in .env file"
+            print(f"❌ {error_msg}")
+            return jsonify({"error": error_msg}), 500
+        
+        print("🤖 Calling Groq API...")
         chat_completion = client.chat.completions.create(
             messages=[{"role": "user", "content": prompt}],
             model="llama-3.1-70b-versatile",
@@ -539,6 +557,12 @@ Keep the response concise and practical."""
         )
         
         assessment = chat_completion.choices[0].message.content
+        print(f"✅ Received assessment ({len(assessment)} characters)")
+        print("=" * 80)
+        print("📥 RESPONSE FROM GROQ:")
+        print("=" * 80)
+        print(assessment)
+        print("=" * 80)
         
         audit_data["assessments"].append({
             "control_id": control_id,
@@ -549,7 +573,11 @@ Keep the response concise and practical."""
         return jsonify({"assessment": assessment})
     
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        error_msg = f"Error in assess_control: {str(e)}"
+        print(f"❌ {error_msg}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": error_msg}), 500
 
 @app.route('/api/chat', methods=['POST'])
 def chat():
