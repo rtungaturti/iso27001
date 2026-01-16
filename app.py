@@ -13,12 +13,26 @@ from flask import Flask, render_template_string, request, jsonify
 from groq import Groq
 import os
 from datetime import datetime
-from dotenv import load_dotenv
 
-load_dotenv()
+# Load .env only in local development
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass  # dotenv not available in production, that's fine
 
 app = Flask(__name__)
-client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+
+# Get API key from environment
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
+
+if not GROQ_API_KEY:
+    print("⚠️  WARNING: GROQ_API_KEY not found in environment variables!")
+    print("⚠️  Please set it in Render dashboard or .env file for local dev")
+    client = None
+else:
+    print(f"✅ GROQ_API_KEY found: {GROQ_API_KEY[:8]}...")
+    client = Groq(api_key=GROQ_API_KEY)
 
 # ISO 27001:2022 Annex A Controls (subset)
 ISO_CONTROLS = {
@@ -595,7 +609,7 @@ Be concise but thorough."""
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_message}
             ],
-            model="llama-3.1-70b-versatile",
+            model="llama-3.3-70b-versatile",
             temperature=0.7,
             max_tokens=1024
         )
